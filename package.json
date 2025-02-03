@@ -1,0 +1,25 @@
+{
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "vite build",
+        "dev": "vite",
+        "configure-husky": "npx husky install && npx husky add .husky/pre-commit \"npx --no-install lint-staged\""
+    },
+    "devDependencies": {
+        "blade-formatter": "^1.41.1",
+        "husky": "^8.0.0",
+        "lint-staged": "^15.2.10",
+        "autoprefixer": "^10.4.20",
+        "axios": "^1.7.4",
+        "concurrently": "^9.0.1",
+        "laravel-vite-plugin": "^1.2.0",
+        "postcss": "^8.4.47",
+        "tailwindcss": "^3.4.13",
+        "vite": "^6.0.11"
+    },
+    "lint-staged": {
+        "*.php": "php ./vendor/bin/pint",
+        "*.blade.php": "blade-formatter --write"
+    }
+}
