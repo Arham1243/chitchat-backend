@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('signup_method')->nullable()->after('social_id');
             $table->string('social_token')->nullable()->after('signup_method');
             $table->string('name')->nullable()->change();
+            $table->string('username')->nullable()->unique();
             $table->string('password')->nullable()->change();
         });
     }
@@ -29,7 +30,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['date_of_birth', 'gender', 'profile_picture']);
+            $table->dropColumn(['date_of_birth', 'gender', 'profile_picture', 'social_id',   'signup_method',   'social_token']);
         });
     }
 };

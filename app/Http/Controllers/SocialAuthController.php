@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Exception;
+use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 
 class SocialAuthController extends Controller
@@ -33,6 +34,7 @@ class SocialAuthController extends Controller
             if ($existingUser) {
                 $existingUser->update([
                     'name' => $socialUser->name,
+                    'username' => Str::slug($socialUser->name),
                     'email' => $socialUser->email ?? $socialUser->nickname.'@'.$social.'.com',
                     'social_id' => $socialUser->id,
                     'signup_method' => $social,
@@ -49,6 +51,7 @@ class SocialAuthController extends Controller
                 ], [
                     'signup_method' => $social,
                     'name' => $socialUser->name,
+                    'username' => Str::slug($socialUser->name),
                     'email' => $socialUser->email ?? $socialUser->nickname.'@'.$social.'.com', // Handle missing email
                     'social_token' => $socialUser->token,
                     'profile_picture' => $socialUser->avatar,

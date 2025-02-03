@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -24,6 +25,7 @@ class AuthController extends Controller
         $user = User::create([
             'signup_method' => 'email',
             'name' => $validated['full_name'],
+            'username' => Str::slug($validated['full_name']),
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'date_of_birth' => $dateOfBirth,
@@ -49,7 +51,7 @@ class AuthController extends Controller
         ]);
 
         if (Auth::attempt($credentials)) {
-            $user = Auth::user();
+            $user = User::where(['email' => $credentials['email']])->first();
             $token = $user->createToken('auth-token')->plainTextToken;
 
             $expiresIn = now()->addMinutes(config('sanctum.expiration', 60))->timestamp;
