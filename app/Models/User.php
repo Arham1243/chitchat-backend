@@ -25,6 +25,11 @@ class User extends Authenticatable
         'remember_token',
     ];
 
+    public function getProfilePictureAttribute($value)
+    {
+        return $value ? asset($value) : asset('assets/images/placeholder-user.png');
+    }
+
     public function socialAccounts()
     {
         return $this->hasMany(SocialAccount::class);
