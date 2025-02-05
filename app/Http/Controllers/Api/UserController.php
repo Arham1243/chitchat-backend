@@ -65,11 +65,30 @@ class UserController extends Controller
 
     public function search(Request $request)
     {
-        $currentUser = $request->user();
+        $currentUserId = $request->user()->id;
         $users = User::where('status', 'active')
-            ->where('id', '!=', $currentUser->id)
+            ->where('id', '!=', $currentUserId)
             ->where('name', 'like', '%'.$request->search.'%')
             ->get();
+        $users = $users->map(function ($user) use ($currentUserId) {
+
+            $friendRequest = FriendRequest::where(function ($query) use ($user, $currentUserId) {
+                $query->where('sender_id', $user->id)
+                    ->where('recipient_id', $currentUserId);
+            })->orWhere(function ($query) use ($user, $currentUserId) {
+                $query->where('sender_id', $currentUserId)
+                    ->where('recipient_id', $user->id);
+            })->first();
+
+            if ($friendRequest && $friendRequest->status === FriendRequestStatus::Accepted) {
+                return null;
+            }
+
+            $user->friend_request_status = $friendRequest ? $friendRequest->status : null;
+
+            return $user;
+        });
+        $users = $users->filter()->values();
 
         return response()->json($users->toArray(), 200);
     }
