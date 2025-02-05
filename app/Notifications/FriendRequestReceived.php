@@ -10,11 +10,11 @@ class FriendRequestReceived extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public $sender;
+    public $user;
 
-    public function __construct($sender)
+    public function __construct($user)
     {
-        $this->sender = $sender;
+        $this->user = $user;
     }
 
     public function via($notifiable)
@@ -25,9 +25,9 @@ class FriendRequestReceived extends Notification implements ShouldQueue
     public function toDatabase($notifiable)
     {
         return [
-            'sender_id' => $this->sender->id,
-            'sender_name' => $this->sender->name,
-            'message' => 'You have received a friend request from '.$this->sender->name,
+            'id' => $this->user->id,
+            'name' => $this->user->name,
+            'message' => 'has sent you a friend request.',
         ];
     }
 }

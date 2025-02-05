@@ -40,19 +40,15 @@ class FriendRequestController extends Controller
 
     public function accept(FriendRequest $friendRequest, Request $request)
     {
-
         $currentUser = $request->user();
-
-        if ($friendRequest->recipient_id !== $currentUser->id && $friendRequest->sender_id !== $currentUser->id) {
-            return response()->json(['message' => 'Unauthorized action'], 403);
-        }
 
         DB::transaction(function () use ($friendRequest, $currentUser) {
 
             $friendRequest->update(['status' => FriendRequestStatus::Accepted]);
 
-            $friendRequest->sender->notify(new FriendRequestAccepted($currentUser));
-            $friendRequest->recipient->notify(new FriendRequestAccepted($currentUser));
+            $friendRequest->sender->notify(new FriendRequestAccepted($currentUser, 'sender'));
+
+            $friendRequest->recipient->notify(new FriendRequestAccepted($currentUser, 'recipient'));
         });
 
         return response()->json(['message' => 'Friend request accepted']);
