@@ -1,8 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\API;
 
+use App\Enums\FriendRequestStatus;
 use App\Http\Controllers\Controller;
+use App\Models\FriendRequest;
 use App\Models\User;
 use App\Traits\UploadImageTrait;
 use Illuminate\Http\Request;
@@ -13,12 +15,33 @@ class UserController extends Controller
 
     public function index(Request $request)
     {
-        $currentUser = $request->user();
+        $currentUserId = $request->user()->id;
+
         $users = User::where('status', 'active')
-            ->where('id', '!=', $currentUser->id)
+            ->where('id', '!=', $currentUserId)
             ->get();
 
-        return response()->json($users->toArray(), 200);
+        $users = $users->map(function ($user) use ($currentUserId) {
+
+            $friendRequest = FriendRequest::where(function ($query) use ($user, $currentUserId) {
+                $query->where('sender_id', $user->id)
+                    ->where('recipient_id', $currentUserId);
+            })->orWhere(function ($query) use ($user, $currentUserId) {
+                $query->where('sender_id', $currentUserId)
+                    ->where('recipient_id', $user->id);
+            })->first();
+
+            if ($friendRequest && $friendRequest->status === FriendRequestStatus::Accepted) {
+                return null;
+            }
+
+            $user->friend_request_status = $friendRequest ? $friendRequest->status : null;
+
+            return $user;
+        });
+        $users = $users->filter()->values();
+
+        return response()->json($users, 200);
     }
 
     public function show($username)
@@ -55,5 +78,27 @@ class UserController extends Controller
         $currentUser->save();
 
         return response()->json($currentUser->toArray(), 200);
+    }
+
+    public function getAllFriends(Request $request)
+    {
+        $currentUser = $request->user();
+
+        $friends = FriendRequest::where(function ($query) use ($currentUser) {
+            $query->where('sender_id', $currentUser->id)
+                ->where('status', FriendRequestStatus::Accepted);
+        })
+            ->orWhere(function ($query) use ($currentUser) {
+                $query->where('recipient_id', $currentUser->id)
+                    ->where('status', FriendRequestStatus::Accepted);
+            })
+            ->get()
+            ->map(function ($friendRequest) use ($currentUser) {
+                return $friendRequest->sender_id === $currentUser->id
+                    ? $friendRequest->recipient
+                    : $friendRequest->sender;
+            });
+
+        return response()->json($friends, 200);
     }
 }

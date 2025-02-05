@@ -1,9 +1,12 @@
 <?php
 
-use App\Http\Controllers\Api\Auth\AuthController;
-use App\Http\Controllers\Api\Auth\PasswordResetController;
-use App\Http\Controllers\Api\Auth\SocialAuthController;
-use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\API\Auth\AuthController;
+use App\Http\Controllers\API\Auth\PasswordResetController;
+use App\Http\Controllers\API\Auth\SocialAuthController;
+use App\Http\Controllers\API\FriendController;
+use App\Http\Controllers\API\FriendRequestController;
+use App\Http\Controllers\API\NotificationController;
+use App\Http\Controllers\API\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -11,10 +14,22 @@ Route::middleware('auth.api')->group(function () {
     Route::get('/auth/me', function (Request $request) {
         return $request->user();
     });
+
     Route::post('/users/search', [UserController::class, 'search']);
     Route::get('/users', [UserController::class, 'index']);
     Route::get('/users/{username}', [UserController::class, 'show']);
+
+    Route::get('/friends', [FriendController::class, 'getAllFriends']);
+    Route::delete('/friends/{friendId}', [FriendController::class, 'removeFriend']);
+    Route::get('/friends/requests/received', [FriendController::class, 'friendRequestsReceived']);
     Route::post('/update-profile-picture', [UserController::class, 'updateProfilePicture']);
+    Route::post('/friend-requests', [FriendRequestController::class, 'store']);
+    Route::put('/friend-requests/{friendRequest}/accept', [FriendRequestController::class, 'accept']);
+
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::get('/notifications/unread', [NotificationController::class, 'getUnreadNotifications']);
+    Route::post('/notifications/{notification}/mark-as-read', [NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
 });
 
 Route::prefix('auth')->group(function () {
