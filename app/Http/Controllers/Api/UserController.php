@@ -80,10 +80,6 @@ class UserController extends Controller
                     ->where('recipient_id', $user->id);
             })->first();
 
-            if ($friendRequest && $friendRequest->status === FriendRequestStatus::Accepted) {
-                return null;
-            }
-
             $user->friend_request_status = $friendRequest ? $friendRequest->status : null;
 
             return $user;
