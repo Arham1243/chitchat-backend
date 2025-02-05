@@ -44,10 +44,21 @@ class UserController extends Controller
         return response()->json($users, 200);
     }
 
-    public function show($username)
+    public function show(Request $request, $username)
     {
+        $currentUserId = $request->user()->id;
         $user = User::where('username', $username)
             ->first();
+
+        $friendRequest = FriendRequest::where(function ($query) use ($user, $currentUserId) {
+            $query->where('sender_id', $user->id)
+                ->where('recipient_id', $currentUserId);
+        })->orWhere(function ($query) use ($user, $currentUserId) {
+            $query->where('sender_id', $currentUserId)
+                ->where('recipient_id', $user->id);
+        })->first();
+
+        $user->friend_request_status = $friendRequest ? $friendRequest->status : null;
 
         return response()->json($user->toArray(), 200);
     }
