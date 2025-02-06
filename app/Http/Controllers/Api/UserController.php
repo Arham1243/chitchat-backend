@@ -6,6 +6,7 @@ use App\Enums\FriendRequestStatus;
 use App\Http\Controllers\Controller;
 use App\Models\FriendRequest;
 use App\Models\User;
+use App\Models\UserSession;
 use App\Traits\UploadImageTrait;
 use Illuminate\Http\Request;
 
@@ -50,6 +51,7 @@ class UserController extends Controller
         $currentUserId = $request->user()->id;
         $user = User::where('username', $username)
             ->first();
+        $expiresIn = now()->addMinutes(config('sanctum.expiration', 60))->timestamp;
 
         $friendRequest = FriendRequest::where(function ($query) use ($user, $currentUserId) {
             $query->where('sender_id', $user->id)
@@ -60,6 +62,13 @@ class UserController extends Controller
         })->first();
 
         $user->friend_request_status = $friendRequest ? $friendRequest->status : null;
+        $session = UserSession::where('user_id', $user->id)->first();
+
+        if ($session && $session->created_at->timestamp < $expiresIn) {
+            $user->is_online = true;
+        } else {
+            $user->is_online = false;
+        }
 
         return response()->json($user->toArray(), 200);
     }

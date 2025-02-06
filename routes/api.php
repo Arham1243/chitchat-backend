@@ -3,6 +3,7 @@
 use App\Http\Controllers\API\Auth\AuthController;
 use App\Http\Controllers\API\Auth\PasswordResetController;
 use App\Http\Controllers\API\Auth\SocialAuthController;
+use App\Http\Controllers\API\ChatController;
 use App\Http\Controllers\API\FriendController;
 use App\Http\Controllers\API\FriendRequestController;
 use App\Http\Controllers\API\NotificationController;
@@ -29,6 +30,13 @@ Route::middleware('auth.api')->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::get('/notifications/unread', [NotificationController::class, 'getUnreadNotifications']);
     Route::post('/notifications/{notification}/mark-as-read', [NotificationController::class, 'markAsRead']);
+
+    Route::prefix('chat')->group(function () {
+        Route::get('/', [ChatController::class, 'index'])->name('chat.index');
+        Route::get('/{userId}', [ChatController::class, 'show'])->name('chat.show');
+        Route::post('/{recipientId}', [ChatController::class, 'sendMessage'])->name('chat.send');
+        Route::post('/create', [ChatController::class, 'createConversation'])->name('chat.create');
+    });
 });
 
 Route::prefix('auth')->group(function () {
