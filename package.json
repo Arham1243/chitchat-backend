@@ -7,16 +7,18 @@
         "configure-husky": "npx husky install && npx husky add .husky/pre-commit \"npx --no-install lint-staged\""
     },
     "devDependencies": {
-        "blade-formatter": "^1.41.1",
-        "husky": "^8.0.0",
-        "lint-staged": "^15.2.10",
         "autoprefixer": "^10.4.20",
         "axios": "^1.7.4",
+        "blade-formatter": "^1.41.1",
         "concurrently": "^9.0.1",
+        "husky": "^8.0.0",
+        "laravel-echo": "^1.19.0",
         "laravel-vite-plugin": "^1.2.0",
+        "lint-staged": "^15.2.10",
         "postcss": "^8.4.47",
+        "pusher-js": "^8.4.0",
         "tailwindcss": "^3.4.13",
-        "vite": "^6.0.11"
+        "vite": "^6.1.0"
     },
     "lint-staged": {
         "*.php": "php ./vendor/bin/pint",

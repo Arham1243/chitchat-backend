@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\API;
 
 use App\Enums\FriendRequestStatus;
+use App\Events\FriendRequestAccepted as FriendRequestAcceptedEvent;
+use App\Events\FriendRequestReceived as FriendRequestReceivedEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreFriendRequestRequest;
 use App\Models\FriendRequest;
@@ -34,6 +36,7 @@ class FriendRequestController extends Controller
 
         $recipient = User::find($validated['recipient_id']);
         $recipient->notify(new FriendRequestReceived($currentUser));
+        event(new FriendRequestReceivedEvent($currentUser));
 
         return response()->json(['message' => 'Friend request sent successfully'], 201);
     }
@@ -49,6 +52,7 @@ class FriendRequestController extends Controller
             $friendRequest->sender->notify(new FriendRequestAccepted($currentUser, 'sender'));
 
             $friendRequest->recipient->notify(new FriendRequestAccepted($currentUser, 'recipient'));
+            event(new FriendRequestAcceptedEvent($currentUser));
         });
 
         return response()->json(['message' => 'Friend request accepted']);

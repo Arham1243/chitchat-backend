@@ -39,6 +39,7 @@ class UserController extends Controller
 
             return $user;
         });
+        $users = $users->filter()->values();
         $users = $users->shuffle()->values();
 
         return response()->json($users, 200);
