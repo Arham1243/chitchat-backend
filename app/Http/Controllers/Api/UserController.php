@@ -106,26 +106,4 @@ class UserController extends Controller
 
         return response()->json($currentUser->toArray(), 200);
     }
-
-    public function getAllFriends(Request $request)
-    {
-        $currentUser = $request->user();
-
-        $friends = FriendRequest::where(function ($query) use ($currentUser) {
-            $query->where('sender_id', $currentUser->id)
-                ->where('status', FriendRequestStatus::Accepted);
-        })
-            ->orWhere(function ($query) use ($currentUser) {
-                $query->where('recipient_id', $currentUser->id)
-                    ->where('status', FriendRequestStatus::Accepted);
-            })
-            ->get()
-            ->map(function ($friendRequest) use ($currentUser) {
-                return $friendRequest->sender_id === $currentUser->id
-                    ? $friendRequest->recipient
-                    : $friendRequest->sender;
-            });
-
-        return response()->json($friends, 200);
-    }
 }

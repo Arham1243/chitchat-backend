@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Enums\FriendRequestStatus;
 use App\Http\Controllers\Controller;
 use App\Models\FriendRequest;
+use App\Models\UserSession;
 use Illuminate\Http\Request;
 
 class FriendController extends Controller
@@ -12,6 +13,7 @@ class FriendController extends Controller
     public function getAllFriends(Request $request)
     {
         $currentUser = $request->user();
+        $expiresIn = now()->addMinutes(config('sanctum.expiration', 60))->timestamp;
 
         $friends = FriendRequest::where(function ($query) use ($currentUser) {
             $query->where('sender_id', $currentUser->id)
@@ -22,10 +24,20 @@ class FriendController extends Controller
                     ->where('status', FriendRequestStatus::Accepted);
             })
             ->get()
-            ->map(function ($friendRequest) use ($currentUser) {
-                return $friendRequest->sender_id === $currentUser->id
+            ->map(function ($friendRequest) use ($currentUser, $expiresIn) {
+                $friend = $friendRequest->sender_id === $currentUser->id
                     ? $friendRequest->recipient
                     : $friendRequest->sender;
+
+                $session = UserSession::where('user_id', $friend->id)->first();
+
+                if ($session && $session->created_at->timestamp < $expiresIn) {
+                    $friend->is_online = true;
+                } else {
+                    $friend->is_online = false;
+                }
+
+                return $friend;
             });
 
         return response()->json($friends, 200);

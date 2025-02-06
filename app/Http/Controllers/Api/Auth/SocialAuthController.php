@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\API\Auth;
 
+use App\Events\UserLoggedIn;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\UserSession;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
@@ -46,6 +49,11 @@ class SocialAuthController extends Controller
                 $token = $existingUser->createToken('google-token')->plainTextToken;
 
                 $expiresIn = now()->addMinutes(config('sanctum.expiration', 60))->timestamp;
+                UserSession::create([
+                    'user_id' => $existingUser->id,
+                    'created_at' => Carbon::now(),
+                ]);
+                event(new UserLoggedIn($existingUser));
             } else {
                 $user = User::updateOrCreate([
                     'social_id' => $socialUser->id,
@@ -57,7 +65,11 @@ class SocialAuthController extends Controller
                     'social_token' => $socialUser->token,
                     'profile_picture' => $socialUser->avatar,
                 ]);
-
+                UserSession::create([
+                    'user_id' => $user->id,
+                    'created_at' => Carbon::now(),
+                ]);
+                event(new UserLoggedIn($user));
                 $token = $user->createToken('google-token')->plainTextToken;
 
                 $expiresIn = now()->addMinutes(config('sanctum.expiration', 60))->timestamp;
@@ -66,7 +78,6 @@ class SocialAuthController extends Controller
             $url = env('APP_FRONTEND_URL').'/auth/login/?access_token='.$token.'&expires_in='.$expiresIn;
 
             return redirect()->away($url);
-
         } catch (Exception $e) {
             dd($e->getMessage());
         }

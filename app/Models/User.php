@@ -55,4 +55,9 @@ class User extends Authenticatable
     {
         return $this->sentFriendRequests()->union($this->receivedFriendRequests());
     }
+
+    public function isOnline()
+    {
+        return UserSession::where('user_id', $this->id)->exists();
+    }
 }

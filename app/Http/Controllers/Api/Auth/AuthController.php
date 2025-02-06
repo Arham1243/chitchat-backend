@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\API\Auth;
 
+use App\Events\UserLoggedIn;
+use App\Events\UserLoggedOut;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\UserSession;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -56,6 +59,11 @@ class AuthController extends Controller
             $token = $user->createToken('auth-token')->plainTextToken;
 
             $expiresIn = now()->addMinutes(config('sanctum.expiration', 60))->timestamp;
+            UserSession::create([
+                'user_id' => $user->id,
+                'created_at' => Carbon::now(),
+            ]);
+            event(new UserLoggedIn($user));
 
             return response()->json([
                 'status' => true,
@@ -77,7 +85,20 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $user = $request->user();
+        $user->tokens->each(function ($token) {
+            $token->delete();
+        });
+        $expirationTime = Carbon::now()->subMinutes(config('sanctum.expiration', 60));
+        UserSession::where('user_id', $user->id)
+            ->where('created_at', '<', $expirationTime)
+            ->delete();
+        UserSession::where('user_id', $user->id)
+            ->delete();
+
+        UserSession::where('user_id', $user->id)->delete();
+
+        event(new UserLoggedOut($request->user()));
 
         return response()->json(['message' => 'Logged out successfully']);
     }
