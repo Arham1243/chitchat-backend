@@ -53,6 +53,10 @@ class SocialAuthController extends Controller
                     'user_id' => $existingUser->id,
                     'created_at' => Carbon::now(),
                 ]);
+                $expirationTime = Carbon::now()->subMinutes(config('sanctum.expiration', 60));
+                UserSession::where('user_id', $existingUser->id)
+                    ->where('created_at', '<', $expirationTime)
+                    ->delete();
                 event(new UserLoggedIn($existingUser));
             } else {
                 $user = User::updateOrCreate([
@@ -69,6 +73,9 @@ class SocialAuthController extends Controller
                     'user_id' => $user->id,
                     'created_at' => Carbon::now(),
                 ]);
+                $expirationTime = Carbon::now()->subMinutes(config('sanctum.expiration', 60));
+                UserSession::where('created_at', '<', $expirationTime)
+                    ->delete();
                 event(new UserLoggedIn($user));
                 $token = $user->createToken('google-token')->plainTextToken;
 

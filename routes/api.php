@@ -33,7 +33,7 @@ Route::middleware('auth.api')->group(function () {
 
     Route::prefix('chat')->group(function () {
         Route::get('/', [ChatController::class, 'index'])->name('chat.index');
-        Route::get('/{userId}', [ChatController::class, 'show'])->name('chat.show');
+        Route::get('/{username}', [ChatController::class, 'show'])->name('chat.show');
         Route::post('/{recipientId}', [ChatController::class, 'sendMessage'])->name('chat.send');
         Route::post('/create', [ChatController::class, 'createConversation'])->name('chat.create');
     });

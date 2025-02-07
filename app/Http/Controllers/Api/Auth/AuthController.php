@@ -63,6 +63,9 @@ class AuthController extends Controller
                 'user_id' => $user->id,
                 'created_at' => Carbon::now(),
             ]);
+            $expirationTime = Carbon::now()->subMinutes(config('sanctum.expiration', 60));
+            UserSession::where('created_at', '<', $expirationTime)
+                ->delete();
             event(new UserLoggedIn($user));
 
             return response()->json([
@@ -90,8 +93,7 @@ class AuthController extends Controller
             $token->delete();
         });
         $expirationTime = Carbon::now()->subMinutes(config('sanctum.expiration', 60));
-        UserSession::where('user_id', $user->id)
-            ->where('created_at', '<', $expirationTime)
+        UserSession::where('created_at', '<', $expirationTime)
             ->delete();
         UserSession::where('user_id', $user->id)
             ->delete();
