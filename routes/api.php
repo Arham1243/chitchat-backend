@@ -36,6 +36,7 @@ Route::middleware('auth.api')->group(function () {
         Route::get('/{username}', [ChatController::class, 'show'])->name('chat.show');
         Route::post('/{recipientId}', [ChatController::class, 'sendMessage'])->name('chat.send');
         Route::post('/messages/{conversationId}/read', [ChatController::class, 'markMessagesAsRead']);
+        Route::get('/messages/unread', [ChatController::class, 'getUnreadMessages']);
     });
 });
 

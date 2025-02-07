@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\API;
 
+use App\Events\MessageRead;
+use App\Events\MessageReceived;
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\Message;
@@ -48,6 +50,22 @@ class ChatController extends Controller
             });
 
         return response()->json($conversations, 200);
+    }
+
+    public function getUnreadMessages(Request $request)
+    {
+        $user = $request->user();
+        $conversations = Conversation::where('user_one_id', $user->id)
+            ->orWhere('user_two_id', $user->id)
+            ->with('messages')
+            ->get();
+        $unreadMessages = $conversations->flatMap(function ($conversation) use ($user) {
+            return $conversation->messages->filter(function ($message) use ($user) {
+                return is_null($message->read_at) && $message->sender_id !== $user->id;
+            });
+        });
+
+        return response()->json($unreadMessages, 200);
     }
 
     public function show(Request $request, $username)
@@ -115,11 +133,13 @@ class ChatController extends Controller
             ]);
         }
 
-        Message::create([
+        $message = Message::create([
             'conversation_id' => $conversation->id,
             'sender_id' => $currentUser->id,
             'message' => $data['message'],
         ]);
+
+        event(new MessageReceived($message, User::where('id', $recipientId)->first()->name));
 
         return response()->json(['message' => 'Message sent successfully'], 200);
     }
@@ -129,6 +149,7 @@ class ChatController extends Controller
         $messagesIds = $request->messagesIds;
         $conversation = Conversation::findOrFail($conversationId);
         $conversation->messages()->whereIn('id', $messagesIds)->update(['read_at' => now()]);
+        event(new MessageRead($conversation));
 
         return response()->json(['message' => 'Message marked as read'], 200);
     }
