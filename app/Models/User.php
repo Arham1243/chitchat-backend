@@ -56,14 +56,15 @@ class User extends Authenticatable
         return $this->sentFriendRequests()->union($this->receivedFriendRequests());
     }
 
-    public function isOnline()
-    {
-        return UserSession::where('user_id', $this->id)->exists();
-    }
-
     public function conversations()
     {
         return Conversation::where('user_one_id', $this->id)
             ->orWhere('user_two_id', $this->id);
+    }
+
+    public function friends()
+    {
+        return $this->belongsToMany(User::class, 'friend_requests', 'user_id', 'recipient_id')
+            ->wherePivot('status', FriendRequestStatus::Accepted);
     }
 }

@@ -23,7 +23,6 @@ class UserController extends Controller
             ->get();
 
         $users = $users->map(function ($user) use ($currentUserId) {
-
             $friendRequest = FriendRequest::where(function ($query) use ($user, $currentUserId) {
                 $query->where('sender_id', $user->id)
                     ->where('recipient_id', $currentUserId);
@@ -36,10 +35,40 @@ class UserController extends Controller
                 return null;
             }
 
+            $currentUserFriends = FriendRequest::where('status', FriendRequestStatus::Accepted)
+                ->where(function ($query) use ($currentUserId) {
+                    $query->where('sender_id', $currentUserId)
+                        ->orWhere('recipient_id', $currentUserId);
+                })
+                ->get()
+                ->flatMap(function ($friend) use ($currentUserId) {
+                    return $friend->sender_id === $currentUserId
+                        ? [$friend->recipient_id]
+                        : [$friend->sender_id];
+                });
+
+            $userFriends = FriendRequest::where('status', FriendRequestStatus::Accepted)
+                ->where(function ($query) use ($user) {
+                    $query->where('sender_id', $user->id)
+                        ->orWhere('recipient_id', $user->id);
+                })
+                ->get()
+                ->flatMap(function ($friend) use ($user) {
+                    return $friend->sender_id === $user->id
+                        ? [$friend->recipient_id]
+                        : [$friend->sender_id];
+                });
+
+            $mutualFriendIds = $currentUserFriends->intersect($userFriends);
+
+            $mutualFriends = User::whereIn('id', $mutualFriendIds)->get();
+
             $user->friend_request_status = $friendRequest ? $friendRequest->status : null;
+            $user->mutual_friends = $mutualFriends;
 
             return $user;
         });
+
         $users = $users->filter()->values();
         $users = $users->shuffle()->values();
 
@@ -49,8 +78,8 @@ class UserController extends Controller
     public function show(Request $request, $username)
     {
         $currentUserId = $request->user()->id;
-        $user = User::where('username', $username)
-            ->first();
+
+        $user = User::where('username', $username)->firstOrFail();
         $expiresIn = now()->addMinutes(config('sanctum.expiration', 60))->timestamp;
 
         $friendRequest = FriendRequest::where(function ($query) use ($user, $currentUserId) {
@@ -62,13 +91,41 @@ class UserController extends Controller
         })->first();
 
         $user->friend_request_status = $friendRequest ? $friendRequest->status : null;
-        $session = UserSession::where('user_id', $user->id)->first();
 
-        if ($session && $session->created_at->timestamp < $expiresIn) {
-            $user->is_online = true;
-        } else {
-            $user->is_online = false;
-        }
+        $session = UserSession::where('user_id', $user->id)->first();
+        $user->is_online = $session && $session->created_at->timestamp < $expiresIn;
+
+        $currentUserFriends = FriendRequest::where('status', FriendRequestStatus::Accepted)
+            ->where(function ($query) use ($currentUserId) {
+                $query->where('sender_id', $currentUserId)
+                    ->orWhere('recipient_id', $currentUserId);
+            })
+            ->get()
+            ->flatMap(function ($friend) use ($currentUserId) {
+                return $friend->sender_id === $currentUserId
+                    ? [$friend->recipient_id]
+                    : [$friend->sender_id];
+            });
+
+        $userFriends = FriendRequest::where('status', FriendRequestStatus::Accepted)
+            ->where(function ($query) use ($user) {
+                $query->where('sender_id', $user->id)
+                    ->orWhere('recipient_id', $user->id);
+            })
+            ->get()
+            ->flatMap(function ($friend) use ($user) {
+                return $friend->sender_id === $user->id
+                    ? [$friend->recipient_id]
+                    : [$friend->sender_id];
+            });
+
+        $mutualFriendIds = $currentUserFriends->intersect($userFriends);
+
+        $friends = User::whereIn('id', $userFriends)->get();
+        $mutualFriends = User::whereIn('id', $mutualFriendIds)->get();
+
+        $user->friends = $friends;
+        $user->mutual_friends = $mutualFriends;
 
         return response()->json($user->toArray(), 200);
     }
