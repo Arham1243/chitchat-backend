@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AuthenticateMiddleware;
+use App\Models\UserSession;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -19,6 +20,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'auth.api' => AuthenticateMiddleware::class,
         ]);
+    })
+    ->withSchedule(function (Illuminate\Console\Scheduling\Schedule $schedule) {
+        $schedule->call(function () {
+            $expirationTime = now()->subMinutes(config('sanctum.expiration', 60));
+            UserSession::where('created_at', '<', $expirationTime)->delete();
+        })->hourly();
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->render(function (AuthenticationException $e, Request $request) {
