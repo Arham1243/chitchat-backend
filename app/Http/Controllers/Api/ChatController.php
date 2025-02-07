@@ -8,7 +8,6 @@ use App\Models\Message;
 use App\Models\User;
 use App\Models\UserSession;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class ChatController extends Controller
 {
@@ -21,24 +20,21 @@ class ChatController extends Controller
             ->with(['userTwo', 'messages'])
             ->get()
             ->map(function ($conversation) use ($user) {
-
                 $recipient = ($conversation->user_one_id == $user->id) ? $conversation->userTwo : $conversation->userOne;
-
                 $expiresIn = now()->addMinutes(config('sanctum.expiration', 60))->timestamp;
                 $session = UserSession::where('user_id', $recipient->id)->first();
                 $recipient->is_online = $session && $session->created_at->timestamp < $expiresIn;
-
                 $conversation->recipient = $recipient;
-
                 $lastMessage = $conversation->messages()->latest()->first();
                 if ($lastMessage) {
                     $conversation->last_message = $lastMessage;
                     $conversation->last_message->time = $lastMessage->created_at->format('Y-m-d H:i:s');
                     $conversation->last_message->read_at = $lastMessage->read_at;
-
                     $conversation->last_message->is_mine = $lastMessage->sender_id === $user->id;
                 }
-
+                $conversation->unread_count = $conversation->messages->filter(function ($message) use ($user) {
+                    return is_null($message->read_at) && $message->sender_id !== $user->id;
+                })->count();
                 $conversation->messages = $conversation->messages->map(function ($message) {
                     return [
                         'id' => $message->id,
@@ -62,7 +58,6 @@ class ChatController extends Controller
         $recipientUser = User::where('username', $username)->firstOrFail();
         $recipientUserId = $recipientUser->id;
 
-        // Find the conversation between the two users
         $conversation = Conversation::where(function ($query) use ($currentUserId, $recipientUserId) {
             $query->where('user_one_id', $currentUserId)
                 ->where('user_two_id', $recipientUserId);
@@ -71,10 +66,8 @@ class ChatController extends Controller
                 ->where('user_two_id', $currentUserId);
         })->first();
 
-        // Fetch messages if the conversation exists
         $messages = $conversation ? $conversation->messages()->orderBy('created_at')->get() : null;
 
-        // Fetch the last message if the conversation exists
         if ($conversation) {
             $lastMessage = $conversation->messages()->latest()->first();
             if ($lastMessage) {
@@ -83,9 +76,11 @@ class ChatController extends Controller
                 $conversation->last_message->read_at = $lastMessage->read_at;
                 $conversation->last_message->is_mine = $lastMessage->sender_id === $currentUserId;
             }
+            $conversation->unread_count = $messages ? $messages->filter(function ($message) use ($currentUserId) {
+                return is_null($message->read_at) && $message->sender_id !== $currentUserId;
+            })->count() : 0;
         }
 
-        // Check if the recipient user is online
         $expiresIn = now()->addMinutes(config('sanctum.expiration', 60))->timestamp;
         $session = UserSession::where('user_id', $recipientUser->id)->first();
         $recipientUser->is_online = $session && $session->created_at->timestamp < $expiresIn;
@@ -129,20 +124,12 @@ class ChatController extends Controller
         return response()->json(['message' => 'Message sent successfully'], 200);
     }
 
-    public function createConversation(Request $request)
+    public function markMessagesAsRead(Request $request, $conversationId)
     {
-        $data = $request->validate([
-            'user_id' => 'required|exists:users,id',
-        ]);
+        $messagesIds = $request->messagesIds;
+        $conversation = Conversation::findOrFail($conversationId);
+        $conversation->messages()->whereIn('id', $messagesIds)->update(['read_at' => now()]);
 
-        $userOneId = min(Auth::id(), $data['user_id']);
-        $userTwoId = max(Auth::id(), $data['user_id']);
-
-        $conversation = Conversation::firstOrCreate([
-            'user_one_id' => $userOneId,
-            'user_two_id' => $userTwoId,
-        ]);
-
-        return redirect()->route('chat.show', $conversation->id);
+        return response()->json(['message' => 'Message marked as read'], 200);
     }
 }
