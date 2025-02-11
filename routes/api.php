@@ -1,13 +1,13 @@
 <?php
 
-use App\Http\Controllers\API\Auth\AuthController;
-use App\Http\Controllers\API\Auth\PasswordResetController;
-use App\Http\Controllers\API\Auth\SocialAuthController;
-use App\Http\Controllers\API\ChatController;
-use App\Http\Controllers\API\FriendController;
-use App\Http\Controllers\API\FriendRequestController;
-use App\Http\Controllers\API\NotificationController;
-use App\Http\Controllers\API\UserController;
+use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\Auth\PasswordResetController;
+use App\Http\Controllers\Api\Auth\SocialAuthController;
+use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\FriendController;
+use App\Http\Controllers\Api\FriendRequestController;
+use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 

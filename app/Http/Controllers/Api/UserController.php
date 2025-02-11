@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\API;
+namespace App\Http\Controllers\Api;
 
 use App\Enums\FriendRequestStatus;
 use App\Http\Controllers\Controller;
