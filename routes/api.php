@@ -11,6 +11,10 @@ use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/', function () {
+    return app()->version();
+});
+
 Route::middleware('auth.api')->group(function () {
     Route::get('/auth/me', function (Request $request) {
         return $request->user();
