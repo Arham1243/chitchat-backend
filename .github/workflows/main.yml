@@ -45,15 +45,6 @@ jobs:
           head -n 3 ~/.ssh/deploy_key
           ssh-keygen -l -f ~/.ssh/deploy_key
 
-      - name: Synchronize Files To Server
-        uses: easingthemes/ssh-deploy@v2.1.5
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          REMOTE_HOST: ${{ secrets.VPS_HOST }}
-          REMOTE_USER: ${{ secrets.VPS_USER }}
-          TARGET: "/var/www/html/chitchat-backend"
-          ARGS: "-avz --rsync-path='sudo rsync'"
-
       - name: Run Remote/Artisan Commands
         uses: appleboy/ssh-action@v0.1.6
         with:
