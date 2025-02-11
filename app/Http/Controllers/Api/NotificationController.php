@@ -15,7 +15,7 @@ class NotificationController extends Controller
 
         $notifications = $currentUser->notifications()
             ->with('notifiable')
-            ->orderBy('created_at', 'desc')
+            ->orderBy('created_at', 'asc')
             ->get();
 
         $notifications = $notifications->filter(function ($notification) use ($currentUser) {
@@ -37,7 +37,7 @@ class NotificationController extends Controller
         $user = $request->user();
         $notifications = $user->unreadNotifications()
             ->with('notifiable')
-            ->orderBy('created_at', 'desc')
+            ->orderBy('created_at', 'asc')
             ->get();
 
         $notifications = $notifications->map(function ($notification) {
