@@ -23,10 +23,21 @@ jobs:
       - name: Install Node
         uses: actions/setup-node@v3
         with:
-          node-version: "20.16.0"
+          node-version: "20"
 
       - name: Install NPM Dependencies
         run: npm install
+
+      - name: Configure SSH Access
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+          chmod 700 ~/.ssh
+          echo "SSH Key Configured Successfully"
 
       - name: Validate Key File
         run: |
@@ -37,28 +48,14 @@ jobs:
       - name: Test SSH Connection
         run: ssh -Tv -o IdentitiesOnly=yes -i ~/.ssh/deploy_key ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} echo "Connected!"
 
-    - name: Configure SSH Access
-      env:
-        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-      run: |
-        mkdir -p ~/.ssh
-        echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
-        chmod 600 ~/.ssh/deploy_key
-        ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
-        
-        # Immediate verification
-        echo "Key file exists?"; ls -la ~/.ssh/deploy_key
-        echo "Key contents:"; head -c 100 ~/.ssh/deploy_key
-
-       - name: Synchronize Files To Server
-      uses: easingthemes/ssh-deploy@v2.1.5
-      env:
-        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        REMOTE_HOST: ${{ secrets.VPS_HOST }}
-        REMOTE_USER: ${{ secrets.VPS_USER }}
-        TARGET: "/var/www/html/chitchat-backend"
-        ARGS: "-avz --rsync-path='sudo rsync'"
-        SSH_KEY_PATH: "/home/runner/.ssh/deploy_key"  # Absolute path
+      - name: Synchronize Files To Server
+        uses: easingthemes/ssh-deploy@v2.1.5
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          REMOTE_HOST: ${{ secrets.VPS_HOST }}
+          REMOTE_USER: ${{ secrets.VPS_USER }}
+          TARGET: "/var/www/html/chitchat-backend"
+          ARGS: "-avz --rsync-path='sudo rsync'"
 
       - name: Run Remote/Artisan Commands
         uses: appleboy/ssh-action@v0.1.6
