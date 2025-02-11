@@ -45,9 +45,6 @@ jobs:
           head -n 3 ~/.ssh/deploy_key
           ssh-keygen -l -f ~/.ssh/deploy_key
 
-      - name: Test SSH Connection
-        run: ssh -Tv -o IdentitiesOnly=yes -i ~/.ssh/deploy_key ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} echo "Connected!"
-
       - name: Synchronize Files To Server
         uses: easingthemes/ssh-deploy@v2.1.5
         env:
