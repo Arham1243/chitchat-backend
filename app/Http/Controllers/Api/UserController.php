@@ -9,10 +9,14 @@ use App\Models\User;
 use App\Models\UserSession;
 use App\Traits\UploadImageTrait;
 use Illuminate\Http\Request;
+use App\Traits\HandlesFriends;
+
 
 class UserController extends Controller
 {
     use UploadImageTrait;
+    use HandlesFriends;
+
 
     public function index(Request $request)
     {
@@ -24,47 +28,22 @@ class UserController extends Controller
 
         $users = $users->map(function ($user) use ($currentUserId) {
             $friendRequest = FriendRequest::where(function ($query) use ($user, $currentUserId) {
-                $query->where('sender_id', $user->id)
-                    ->where('recipient_id', $currentUserId);
-            })->orWhere(function ($query) use ($user, $currentUserId) {
-                $query->where('sender_id', $currentUserId)
-                    ->where('recipient_id', $user->id);
+                $query->whereIn('sender_id', [$user->id, $currentUserId])
+                    ->whereIn('recipient_id', [$user->id, $currentUserId]);
             })->first();
 
             if ($friendRequest && $friendRequest->status === FriendRequestStatus::Accepted) {
                 return null;
             }
 
-            $currentUserFriends = FriendRequest::where('status', FriendRequestStatus::Accepted)
-                ->where(function ($query) use ($currentUserId) {
-                    $query->where('sender_id', $currentUserId)
-                        ->orWhere('recipient_id', $currentUserId);
-                })
-                ->get()
-                ->flatMap(function ($friend) use ($currentUserId) {
-                    return $friend->sender_id === $currentUserId
-                        ? [$friend->recipient_id]
-                        : [$friend->sender_id];
-                });
+            $currentUserFriends = $this->getFriends($currentUserId);
 
-            $userFriends = FriendRequest::where('status', FriendRequestStatus::Accepted)
-                ->where(function ($query) use ($user) {
-                    $query->where('sender_id', $user->id)
-                        ->orWhere('recipient_id', $user->id);
-                })
-                ->get()
-                ->flatMap(function ($friend) use ($user) {
-                    return $friend->sender_id === $user->id
-                        ? [$friend->recipient_id]
-                        : [$friend->sender_id];
-                });
+            $userFriends = $this->getFriends($user->id);
 
             $mutualFriendIds = $currentUserFriends->intersect($userFriends);
 
-            $mutualFriends = User::whereIn('id', $mutualFriendIds)->get();
-
-            $user->friend_request_status = $friendRequest ? $friendRequest->status : null;
-            $user->mutual_friends = $mutualFriends;
+            $user->friend_request_status = $this->getFriendRequestStatus($currentUserId, $user->id);
+            $user->mutual_friends = User::whereIn('id', $mutualFriendIds)->get();
 
             return $user;
         });
@@ -75,6 +54,7 @@ class UserController extends Controller
         return response()->json($users, 200);
     }
 
+
     public function show(Request $request, $username)
     {
         $currentUserId = $request->user()->id;
@@ -82,42 +62,15 @@ class UserController extends Controller
         $user = User::where('username', $username)->firstOrFail();
         $expiresIn = now()->addMinutes(config('sanctum.expiration', 60))->timestamp;
 
-        $friendRequest = FriendRequest::where(function ($query) use ($user, $currentUserId) {
-            $query->where('sender_id', $user->id)
-                ->where('recipient_id', $currentUserId);
-        })->orWhere(function ($query) use ($user, $currentUserId) {
-            $query->where('sender_id', $currentUserId)
-                ->where('recipient_id', $user->id);
-        })->first();
 
-        $user->friend_request_status = $friendRequest ? $friendRequest->status : null;
+        $user->friend_request_status = $this->getFriendRequestStatus($currentUserId, $user->id);
 
         $session = UserSession::where('user_id', $user->id)->first();
         $user->is_online = $session && $session->created_at->timestamp < $expiresIn;
 
-        $currentUserFriends = FriendRequest::where('status', FriendRequestStatus::Accepted)
-            ->where(function ($query) use ($currentUserId) {
-                $query->where('sender_id', $currentUserId)
-                    ->orWhere('recipient_id', $currentUserId);
-            })
-            ->get()
-            ->flatMap(function ($friend) use ($currentUserId) {
-                return $friend->sender_id === $currentUserId
-                    ? [$friend->recipient_id]
-                    : [$friend->sender_id];
-            });
+        $currentUserFriends = $this->getFriends($currentUserId);
 
-        $userFriends = FriendRequest::where('status', FriendRequestStatus::Accepted)
-            ->where(function ($query) use ($user) {
-                $query->where('sender_id', $user->id)
-                    ->orWhere('recipient_id', $user->id);
-            })
-            ->get()
-            ->flatMap(function ($friend) use ($user) {
-                return $friend->sender_id === $user->id
-                    ? [$friend->recipient_id]
-                    : [$friend->sender_id];
-            });
+        $userFriends = $this->getFriends($user->id);
 
         $mutualFriendIds = $currentUserFriends->intersect($userFriends);
 
@@ -135,22 +88,14 @@ class UserController extends Controller
         $currentUserId = $request->user()->id;
         $users = User::where('status', 'active')
             ->where('id', '!=', $currentUserId)
-            ->where('name', 'like', '%'.$request->search.'%')
+            ->where('name', 'like', '%' . $request->search . '%')
             ->get();
+
         $users = $users->map(function ($user) use ($currentUserId) {
-
-            $friendRequest = FriendRequest::where(function ($query) use ($user, $currentUserId) {
-                $query->where('sender_id', $user->id)
-                    ->where('recipient_id', $currentUserId);
-            })->orWhere(function ($query) use ($user, $currentUserId) {
-                $query->where('sender_id', $currentUserId)
-                    ->where('recipient_id', $user->id);
-            })->first();
-
-            $user->friend_request_status = $friendRequest ? $friendRequest->status : null;
-
+            $user->friend_request_status = $this->getFriendRequestStatus($currentUserId, $user->id);
             return $user;
         });
+
         $users = $users->filter()->values();
 
         return response()->json($users->toArray(), 200);
@@ -166,7 +111,7 @@ class UserController extends Controller
                 }
             }],
         ]);
-        $profilePicture = $this->simpleUploadImg($request->profile_picture, 'Users/'.$currentUser->username.'/Profiles-Pictures', $currentUser->profile_picture);
+        $profilePicture = $this->simpleUploadImg($request->profile_picture, 'Users/' . $currentUser->username . '/Profiles-Pictures', $currentUser->profile_picture);
         $currentUser->profile_picture = $profilePicture;
         $currentUser->save();
 
