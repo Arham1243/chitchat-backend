@@ -28,7 +28,7 @@ class AuthController extends Controller
         ]);
         $dateOfBirth = Carbon::parse($validated['date_of_birth'])->format('Y-m-d H:i:s');
 
-        $username = $this->generateSlug($validated['full_name'], 'username');
+        $username = $this->generateSlug(User::class, $validated['full_name'], 'username');
 
         $user = User::create([
             'signup_method' => 'email',

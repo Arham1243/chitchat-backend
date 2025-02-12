@@ -37,7 +37,7 @@ class SocialAuthController extends Controller
             $socialUser = Socialite::driver($social)->stateless()->user();
 
             $existingUser = User::where('email', $socialUser->email)->first();
-            $username = $this->generateSlug($socialUser->name, 'username');
+            $username = $this->generateSlug(User::class, $socialUser->name, 'username');
 
             if ($existingUser) {
                 $existingUser->update([
