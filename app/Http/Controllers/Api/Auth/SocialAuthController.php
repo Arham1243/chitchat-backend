@@ -6,6 +6,7 @@ use App\Events\UserLoggedIn;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\UserSession;
+use App\Traits\Sluggable;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Str;
@@ -13,6 +14,8 @@ use Laravel\Socialite\Facades\Socialite;
 
 class SocialAuthController extends Controller
 {
+    use Sluggable;
+
     public function index()
     {
         $social = 'google';
@@ -34,11 +37,12 @@ class SocialAuthController extends Controller
             $socialUser = Socialite::driver($social)->stateless()->user();
 
             $existingUser = User::where('email', $socialUser->email)->first();
+            $username = $this->generateSlug($socialUser->name, 'username');
 
             if ($existingUser) {
                 $existingUser->update([
                     'name' => $socialUser->name,
-                    'username' => Str::slug($socialUser->name),
+                    'username' => $username,
                     'email' => $socialUser->email ?? $socialUser->nickname.'@'.$social.'.com',
                     'social_id' => $socialUser->id,
                     'signup_method' => $social,
@@ -63,7 +67,7 @@ class SocialAuthController extends Controller
                     'social_id' => $socialUser->id,
                 ], [
                     'signup_method' => $social,
-                    'name' => $socialUser->name,
+                    'name' => $username,
                     'username' => Str::slug($socialUser->name),
                     'email' => $socialUser->email ?? $socialUser->nickname.'@'.$social.'.com', // Handle missing email
                     'social_token' => $socialUser->token,

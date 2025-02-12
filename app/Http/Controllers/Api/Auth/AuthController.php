@@ -7,14 +7,16 @@ use App\Events\UserLoggedOut;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\UserSession;
+use App\Traits\Sluggable;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
+    use Sluggable;
+
     public function register(Request $request)
     {
         $validated = $request->validate([
@@ -26,10 +28,12 @@ class AuthController extends Controller
         ]);
         $dateOfBirth = Carbon::parse($validated['date_of_birth'])->format('Y-m-d H:i:s');
 
+        $username = $this->generateSlug($validated['full_name'], 'username');
+
         $user = User::create([
             'signup_method' => 'email',
             'name' => $validated['full_name'],
-            'username' => Str::slug($validated['full_name']),
+            'username' => $username,
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'date_of_birth' => $dateOfBirth,
