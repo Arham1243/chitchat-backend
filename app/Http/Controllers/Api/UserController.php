@@ -2,21 +2,17 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Enums\FriendRequestStatus;
 use App\Http\Controllers\Controller;
-use App\Models\FriendRequest;
 use App\Models\User;
 use App\Models\UserSession;
+use App\Traits\HandlesFriends;
 use App\Traits\UploadImageTrait;
 use Illuminate\Http\Request;
-use App\Traits\HandlesFriends;
-
 
 class UserController extends Controller
 {
-    use UploadImageTrait;
     use HandlesFriends;
-
+    use UploadImageTrait;
 
     public function index(Request $request)
     {
@@ -27,14 +23,6 @@ class UserController extends Controller
             ->get();
 
         $users = $users->map(function ($user) use ($currentUserId) {
-            $friendRequest = FriendRequest::where(function ($query) use ($user, $currentUserId) {
-                $query->whereIn('sender_id', [$user->id, $currentUserId])
-                    ->whereIn('recipient_id', [$user->id, $currentUserId]);
-            })->first();
-
-            if ($friendRequest && $friendRequest->status === FriendRequestStatus::Accepted) {
-                return null;
-            }
 
             $currentUserFriends = $this->getFriends($currentUserId);
 
@@ -42,8 +30,10 @@ class UserController extends Controller
 
             $mutualFriendIds = $currentUserFriends->intersect($userFriends);
 
+            $mutualFriends = User::whereIn('id', $mutualFriendIds)->get();
+
             $user->friend_request_status = $this->getFriendRequestStatus($currentUserId, $user->id);
-            $user->mutual_friends = User::whereIn('id', $mutualFriendIds)->get();
+            $user->mutual_friends = $mutualFriends;
 
             return $user;
         });
@@ -54,14 +44,12 @@ class UserController extends Controller
         return response()->json($users, 200);
     }
 
-
     public function show(Request $request, $username)
     {
         $currentUserId = $request->user()->id;
 
         $user = User::where('username', $username)->firstOrFail();
         $expiresIn = now()->addMinutes(config('sanctum.expiration', 60))->timestamp;
-
 
         $user->friend_request_status = $this->getFriendRequestStatus($currentUserId, $user->id);
 
@@ -88,11 +76,12 @@ class UserController extends Controller
         $currentUserId = $request->user()->id;
         $users = User::where('status', 'active')
             ->where('id', '!=', $currentUserId)
-            ->where('name', 'like', '%' . $request->search . '%')
+            ->where('name', 'like', '%'.$request->search.'%')
             ->get();
 
         $users = $users->map(function ($user) use ($currentUserId) {
             $user->friend_request_status = $this->getFriendRequestStatus($currentUserId, $user->id);
+
             return $user;
         });
 
@@ -111,7 +100,7 @@ class UserController extends Controller
                 }
             }],
         ]);
-        $profilePicture = $this->simpleUploadImg($request->profile_picture, 'Users/' . $currentUser->username . '/Profiles-Pictures', $currentUser->profile_picture);
+        $profilePicture = $this->simpleUploadImg($request->profile_picture, 'Users/'.$currentUser->username.'/Profiles-Pictures', $currentUser->profile_picture);
         $currentUser->profile_picture = $profilePicture;
         $currentUser->save();
 
