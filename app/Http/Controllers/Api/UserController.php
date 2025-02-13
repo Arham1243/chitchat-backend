@@ -18,14 +18,17 @@ class UserController extends Controller
     {
         $currentUserId = $request->user()->id;
 
+        // Get the IDs of the current user's friends
+        $currentUserFriends = $this->getFriends($currentUserId);
+
+        // Fetch users who are active and not the current user or their friends
         $users = User::where('status', 'active')
             ->where('id', '!=', $currentUserId)
+            ->whereNotIn('id', $currentUserFriends)
             ->get();
 
         $users = $users->map(function ($user) use ($currentUserId) {
-
             $currentUserFriends = $this->getFriends($currentUserId);
-
             $userFriends = $this->getFriends($user->id);
 
             $mutualFriendIds = $currentUserFriends->intersect($userFriends);
@@ -38,7 +41,6 @@ class UserController extends Controller
             return $user;
         });
 
-        $users = $users->filter()->values();
         $users = $users->shuffle()->values();
 
         return response()->json($users, 200);
