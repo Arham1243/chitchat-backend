@@ -6,9 +6,9 @@ Follow the steps below to set up and run the backend locally:
 
 ---
 
-### Prerequisites
+### Dependencies
 
-Ensure the following tools are installed on your system:
+Ensure the following Dependencies are installed on your system:
 
 - **[PHP]** (v8.2+)
 - **[Node.js]** (v20.16+)
@@ -21,7 +21,7 @@ Ensure the following tools are installed on your system:
 1. **Clone the Repository**:
 
     ```bash
-    git clone https://github.com/your-username/chitchat-backend.git
+    git clone https://github.com/Arham1243/chitchat-backend.git
     cd chitchat-backend
 
     ```
