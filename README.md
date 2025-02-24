@@ -35,7 +35,7 @@ Ensure the following Dependencies are installed on your system:
 3. **Install Node.js Dependencies:**:
 
     ```bash
-    npm run install
+    npm install
     ```
 
 4. **Configure Husky for Git Hooks:**:
