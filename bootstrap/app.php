@@ -6,7 +6,9 @@ use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -21,11 +23,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth.api' => AuthenticateMiddleware::class,
         ]);
     })
-    ->withSchedule(function (Illuminate\Console\Scheduling\Schedule $schedule) {
+    ->withSchedule(function (Illuminate\Console\Scheduling\Schedule $schedule) { 
         $schedule->call(function () {
-            $expirationTime = now()->subMinutes(config('sanctum.expiration', 60));
+            $expirationTime = Carbon::now()->subMinutes(config('sanctum.expiration', 60));
             UserSession::where('created_at', '<', $expirationTime)->delete();
-        })->hourly();
+        })->everyMinute();
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->render(function (AuthenticationException $e, Request $request) {
