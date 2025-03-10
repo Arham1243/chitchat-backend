@@ -1,5 +1,8 @@
 # Chitchat Backend
 
+## 🎥 Watch In Action
+[![](https://raw.githubusercontent.com/Arham1243/chitchat-frontend/main/thumbnail.png)](https://vimeo.com/1064296809/90eee11c4d)
+
 ## 🚀 Quick Start
 
 Follow the steps below to set up and run the backend locally:
